@@ -1,5 +1,6 @@
 let dbConnection = require('../db/dbConnection')
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 
 exports.login = (req, res) => {
@@ -17,9 +18,10 @@ exports.login = (req, res) => {
 };
 
 exports.register = (req, res) => {
+    console.log(bcrypt.hashSync(req.body.password, 10));
     const user = {
         name: req.body.name,
-        password: req.body.password
+        password: bcrypt.hashSync(req.body.password, 10)
     }
     dbConnection.register(user, res).then(res.send('ok'));
 };
