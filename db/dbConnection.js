@@ -6,6 +6,7 @@ exports.getUsers = _ => {
     return db.manyOrNone("SELECT name FROM users_table");
 };
 
+
 exports.register = (user) => {
     return db.result('INSERT INTO users_table(name, password) VALUES($1, $2)', [user.name, user.password]);
 }
