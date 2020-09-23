@@ -1,13 +1,22 @@
+const dotenv = require('dotenv');
+dotenv.config();
 const express = require('express');
 const app = express();
-const parser = require('body-parser')
+const parser = require('body-parser');
+const passport = require('./config/passport');
+
 
 const routes = require('./routes/public-routes')
 
 app.use(parser.urlencoded({ extended: false }));
 app.use(parser.json());
 app.use('/', routes);
+app.use(express.static('data'));
 
-const PORT = process.env.PORT || 4000;
+
+app.use(passport.initialize());
+
+const PORT = process.env.PORT;
 app.listen(PORT);
 
+module.exports = app;
