@@ -11,7 +11,7 @@ exports.login = (req, res) => {
         if(!r) {
             res.send('user not found');
         } else {
-            res.send('success!');
+            getToken(req, res);
         }
     });
 };
@@ -32,7 +32,7 @@ exports.welcome = (req, res) => {
     res.send('Hello World');
 };
 
-exports.getToken = (req, res) => {
+getToken = (req, res) => {
     if (!req.body.name || !req.body.password) {
         return res.status(400).send('user not found');
     }
@@ -43,6 +43,6 @@ exports.getToken = (req, res) => {
 
     dbConnection.getUserId(User).then(userID => {
         const token = jwt.sign(userID, process.env.SECRET_OR_KEY);
-        res.send(token);
+        res.send({ token: token, id: userID.id});
     })
 }
