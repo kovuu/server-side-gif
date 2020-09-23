@@ -4,26 +4,45 @@ const bcrypt = require('bcrypt');
 
 
 exports.login = (req, res) => {
-    const user = {
+    if (!req.body.name || !req.body.password) {
+        res.status(412).send('No login or Password');
+    }
+    const loginData = {
         name: req.body.name,
         password: req.body.password
     }
-    dbConnection.getUserId(user).then((r) => {
+    dbConnection.getUserByName(loginData.name).then((r) => {
         if(!r) {
+            console.log('r')
             res.send('user not found');
-        } else {
-            getToken(req, res);
         }
+        if (!bcrypt.compareSync(loginData.password, r.password)) {
+            res.status(403).statusText('not correct password').send();
+        }
+        let userID = {id: r.id};
+        let token = getToken(userID);
+        let result = {
+            token: token,
+            id: r.id
+        }
+        res.send(result);
     });
 };
 
 exports.register = (req, res) => {
-    console.log(bcrypt.hashSync(req.body.password, 10));
+    if (!req.body.name || !req.body.password) {
+        res.status(412).send('No login or Password');
+    }
     const user = {
         name: req.body.name,
         password: bcrypt.hashSync(req.body.password, 10)
     }
-    dbConnection.register(user, res).then(res.send('ok'));
+    dbConnection.register(user, res).then((r) => {
+        if (!r) {
+            res.status(403).send('error while writing in database');
+        }
+        res.send({msg: 'user has been register'});
+    });
 };
 
 exports.getUsers = (req, res) => {
@@ -34,17 +53,6 @@ exports.welcome = (req, res) => {
     res.send('Hello World');
 };
 
-getToken = (req, res) => {
-    if (!req.body.name || !req.body.password) {
-        return res.status(400).send('user not found');
-    }
-    const User = {
-        name: req.body.name,
-        password: req.body.password
-    };
-
-    dbConnection.getUserId(User).then(userID => {
-        const token = jwt.sign(userID, process.env.SECRET_OR_KEY);
-        res.send({ token: token, id: userID.id});
-    })
+getToken = (userID) => {
+    return jwt.sign(userID, process.env.SECRET_OR_KEY);
 }

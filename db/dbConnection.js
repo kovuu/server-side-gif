@@ -38,3 +38,7 @@ exports.addToFavorites = (data) => {
 exports.removeFromFavorites = (data) => {
     return db.result('DELETE FROM favourite_gifs_table WHERE image_id=$1 AND user_id=$2', [data.image_id, data.user_id]);
 }
+
+exports.getUserByName = (name) => {
+    return db.oneOrNone('SELECT * FROM users_table WHERE name=$1', name);
+}
