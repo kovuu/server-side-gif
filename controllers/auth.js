@@ -13,11 +13,10 @@ exports.login = (req, res) => {
     }
     dbConnection.getUserByName(loginData.name).then((r) => {
         if(!r) {
-            console.log('r')
-            res.send('user not found');
+            res.status(403).send('user not found');
         }
         if (!bcrypt.compareSync(loginData.password, r.password)) {
-            res.status(403).statusText('not correct password').send();
+            res.status(403).send('not correct password');
         }
         let userID = {id: r.id};
         let token = getToken(userID);
