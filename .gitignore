@@ -4,7 +4,8 @@
 /dist
 /tmp
 /out-tsc
-/data*
+/data
+/data/img
 # Only exists if Bazel was run
 /bazel-out
 
