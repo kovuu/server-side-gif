@@ -1,21 +1,30 @@
 let dbConnection = require('../db/dbConnection');
-const formidable = require('formidable');
-const form = formidable ({multiples: true, uploadDir: './data/img', keepExtensions: true});
+
 
 exports.uploadImage = (req, res) => {
-    form.parse(req, (err, fields, files) => {
-        let file = files[''];
-        const img_info = {
-            name: file.name,
-            path: file.path,
-            user_id: req.headers['x-userid']
-        }
-
-        dbConnection.uploadImage(img_info).then(() => {
-            res.send('http://localhost/' + img_info.path);
+    if (!req.file) {
+        console.log("No file is available!");
+        return res.status(400).send({
+            message: 'No File to available',
+            success: false
         });
 
-    });
+    } else {
+        const img_info = {
+            name: req.file.originalname,
+            path: req.file.destination.substr(2) + '/' + req.file.filename,
+            user_id: req.headers['x-userid']
+        }
+        dbConnection.uploadImage(img_info)
+            .then(() => {
+                console.log('File is available!');
+                return res.status(200).send({
+                    message: 'Success!',
+                    success: true
+                })
+            });
+
+    }
 };
 
 exports.getAllImages = (req, res) => {
