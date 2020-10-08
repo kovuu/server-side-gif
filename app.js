@@ -12,7 +12,8 @@ app.use(cors());
 app.use(parser.urlencoded({ extended: false }));
 app.use(parser.json());
 app.use('/', routes);
-app.use(express.static('data'));
+app.use('/data/img', express.static(__dirname + '/data/img'));
+
 
 
 

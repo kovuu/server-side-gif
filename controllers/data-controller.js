@@ -1,4 +1,8 @@
 let dbConnection = require('../db/dbConnection');
+const upload = require("../multer/multer");
+const https = require('https');
+const fs = require('fs');
+
 
 
 exports.uploadImage = (req, res) => {
@@ -26,6 +30,38 @@ exports.uploadImage = (req, res) => {
 
     }
 };
+
+exports.uploadImageByUrl = (req, res) => {
+    const imageUrl = req.body.image_url;
+    const imgName = 'image'+Date.now()+'.gif';
+    const imgPath = `data/img/${imgName}`;
+    let file = fs.createWriteStream('./'+imgPath);
+    https.get(imageUrl, function (response) {
+        response.pipe(file);
+        file.on("finish", () => {
+            const img_info = {
+                name: imgName,
+                path: imgPath,
+                user_id: req.headers['x-userid']
+            }
+            dbConnection.uploadImage(img_info)
+                .then(() => {
+                    console.log('File is available!');
+                    return res.status(200).send({
+                        message: 'Success!',
+                        success: true
+                    })
+                });
+        })
+
+
+
+    })
+
+
+}
+
+
 
 exports.getAllImages = (req, res) => {
     dbConnection.getAllImagesLinks().then(r => {
