@@ -14,7 +14,7 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/upload', passport.authenticate('jwt', { session: false }), upload.single('image') , dataController.uploadImage);
 router.post('/upload_from_link', passport.authenticate('jwt', { session: false }), dataController.uploadImageByUrl);
-router.post('/profile/images',passport.authenticate('jwt', { session: false }), dataController.getMyImages);
+router.get('/profile/images',passport.authenticate('jwt', { session: false }), dataController.getUserFavouritesImages);
 router.put('/toFavs', passport.authenticate('jwt', { session: false }), dataController.addToFavorites);
 router.delete('/removeFromFavs', passport.authenticate('jwt', { session: false }), dataController.removeFromFavorites);
 router.get('/images', dataController.getAllImages);

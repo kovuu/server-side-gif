@@ -23,12 +23,24 @@ exports.uploadImage = (img_info) => {
     return db.result('INSERT INTO gif_table(name, path, user_id) VALUES($1, $2, $3)', [img_info.name, img_info.path, img_info.user_id]);
 }
 
-exports.getAllImagesLinks = _ => {
-    return db.manyOrNone('SELECT path FROM gif_table');
+exports.getAllImagesLinks = (userID) => {
+    return db.manyOrNone(`SELECT CASE WHEN b.user_id = $1 AND b.image_id = g.id THEN true
+                        ELSE false
+                        END as favourite, 
+                        g.id,
+                        g.path
+                        FROM gif_table g
+                        LEFT OUTER JOIN favourite_gifs_table b 
+                        on b.image_id = g.id`, userID);
 }
 
 exports.getAllImagesByUser = (user_id) => {
     return db.manyOrNone('SELECT id, name path FROM gif_table WHERE user_id=$1', user_id);
+}
+
+exports.getFavouriteImagesByUser = (user_id) => {
+    return db.manyOrNone(`SELECT id, path FROM gif_table INNER JOIN favourite_gifs_table 
+                            ON (favourite_gifs_table.image_id = gif_table.id) WHERE favourite_gifs_table.user_id = $1`, user_id);
 }
 
 exports.addToFavorites = (data) => {

@@ -53,34 +53,34 @@ exports.uploadImageByUrl = (req, res) => {
                     })
                 });
         })
-
-
-
     })
-
-
 }
 
-
-
 exports.getAllImages = (req, res) => {
-    dbConnection.getAllImagesLinks().then(r => {
+    const userID = req.headers['x-userid'] ? req.headers['x-userid'] : null;
+    dbConnection.getAllImagesLinks(userID).then(r => {
        res.send(r);
     });
 };
 
 exports.getMyImages = (req, res) => {
     const userId = req.headers['x-userid'];
-
     dbConnection.getAllImagesByUser(userId).then((r) => {
         res.send(r);
     });
 }
 
+exports.getUserFavouritesImages = (req, res) => {
+    const userId = req.headers['x-userid'];
+    dbConnection.getFavouriteImagesByUser(userId).then((r) => {
+        res.send(r);
+    })
+}
+
 exports.addToFavorites = (req, res) => {
-    console.log(req.body.image_id);
+    console.log(req)
     data = {
-        image_id: req.body.image_id,
+        image_id: req.body.imgId,
         user_id: req.headers['x-userid']
     }
 
@@ -88,8 +88,10 @@ exports.addToFavorites = (req, res) => {
 }
 
 exports.removeFromFavorites = (req, res) => {
+    console.log(req.query.imgId);
+    image_id = req.query.imgId;
     data = {
-        image_id: req.body.image_id,
+        image_id,
         user_id: req.headers['x-userid']
     }
 
