@@ -20,18 +20,11 @@ exports.getUserById = (id) => {
 }
 
 exports.uploadImage = (img_info) => {
-    return db.result('INSERT INTO gif_table(name, path, user_id) VALUES($1, $2, $3)', [img_info.name, img_info.path, img_info.user_id]);
+    return db.result('INSERT INTO gif_table(name, path, user_id) VALUES($1, $2, $3) RETURNING id', [img_info.name, img_info.path, img_info.user_id]);
 }
 
-exports.getAllImagesLinks = (userID) => {
-    return db.manyOrNone(`SELECT CASE WHEN b.user_id = $1 AND b.image_id = g.id THEN true
-                        ELSE false
-                        END as favourite, 
-                        g.id,
-                        g.path
-                        FROM gif_table g
-                        LEFT OUTER JOIN favourite_gifs_table b 
-                        on b.image_id = g.id`, userID);
+exports.getAllImagesLinks = () => {
+    return db.manyOrNone(`SELECT * FROM gif_table`);
 }
 
 exports.getAllImagesByUser = (user_id) => {
@@ -53,4 +46,21 @@ exports.removeFromFavorites = (data) => {
 
 exports.getUserByName = (name) => {
     return db.oneOrNone('SELECT * FROM users_table WHERE name=$1', name);
+}
+
+exports.checkIsFavourite = (props) => {
+
+    return db.oneOrNone('SELECT * FROM favourite_gifs_table WHERE user_id=$1 AND image_id=$2', [props.user_id, props.image_id]);
+}
+
+exports.getTagId = (tag) => {
+    return db.oneOrNone('SELECT id FROM tags_table WHERE name=$1', tag);
+}
+
+exports.addNewTag = (tag) => {
+    return db.result('INSERT INTO tags_table(name) VALUES($1) RETURNING id', tag);
+}
+
+exports.addTagToImage = (params) => {
+    return db.result('INSERT INTO gif_to_tag_table (image_id, tag_id) VALUES ($1, $2)', [params.imageId, params.tagId])
 }
