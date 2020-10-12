@@ -56,12 +56,13 @@ const addTagsToImage = (tags, imageId) => {
                 tagId,
                 imageId
             }
-            dbConnection.addTagToImage(params).then(r => {
+            await dbConnection.addTagToImage(params).then(r => {
                 if(!r) {
                     throw new Error('Тег не добавлен');
                 }
             })
         });
+
     }
 }
 
@@ -98,24 +99,58 @@ exports.uploadImageByUrl = (req, res) => {
     })
 }
 
-exports.getAllImages = (req, res) => {
+const getAllImagesWithoutTags = async (userID) => {
+    let imagesLinks;
+    await dbConnection.getAllImagesLinks().then( async (r) => {
+        imagesLinks = r;
+        await checkIsFavourite(imagesLinks, userID);
+    });
+    return imagesLinks;
+}
+
+exports.getAllImages = async (req, res) => {
     const userID = req.headers['x-userid'] ? req.headers['x-userid'] : null;
     let imagesLinks;
-    dbConnection.getAllImagesLinks().then( async (r) => {
-        imagesLinks = r;
-        for (let i = 0; i < imagesLinks.length; i++) {
-            const props = {
-                user_id: userID,
-                image_id: imagesLinks[i].id
-            }
-           await dbConnection.checkIsFavourite(props).then(r => {
-                if (r) imagesLinks[i].favourite = true;
-                if (!r) imagesLinks[i].favourite = false;
-            });
-        }
+    let tags = req.query.tags.trim().replace(/\s/g, '').split('#');
+    tags.shift();
+    for (let i = 0; i < tags.length; i++) {
+        tags[i] = tags[i].toLowerCase();
+    }
+    tags = new Set(tags);
+    tags = [...tags];
+
+    if (tags.length === 0) {
+        imagesLinks = await getAllImagesWithoutTags(userID);
         res.send(imagesLinks);
+    }
+
+    dbConnection.getTagsIds(tags).then(r => {
+        if (r.length === 0) {
+            res.send([]);
+        }
+        if (r) {
+            dbConnection.getImagesByIds(r).then(async (response) => {
+                imagesLinks = response;
+                await checkIsFavourite(imagesLinks, userID);
+                res.send(imagesLinks);
+            })
+        }
     });
 };
+
+const checkIsFavourite = async (imagesLinks, userID) => {
+    for (let i = 0; i < imagesLinks.length; i++) {
+
+        const props = {
+            user_id: userID,
+            image_id: imagesLinks[i].id
+        }
+        await dbConnection.checkIsFavourite(props).then(r => {
+            if (r) imagesLinks[i].favourite = true;
+            if (!r) imagesLinks[i].favourite = false;
+        });
+    }
+}
 
 exports.getMyImages = (req, res) => {
     const userId = req.headers['x-userid'];
