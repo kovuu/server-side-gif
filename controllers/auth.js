@@ -2,8 +2,12 @@ let dbConnection = require('../db/dbConnection')
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
+const db = require("../models");
+const User = db.users;
+const Op = db.sequelize.Op;
 
-exports.login = (req, res) => {
+
+exports.login = async (req, res) => {
     if (!req.body.name || !req.body.password) {
         res.status(412).send('No login or Password');
     }
@@ -11,27 +15,29 @@ exports.login = (req, res) => {
         name: req.body.name,
         password: req.body.password
     }
-    dbConnection.getUserByName(loginData.name).then((r) => {
-        if(!r) {
-            res.status(403).send('User not found');
-            return;
+
+    await User.findAll({
+        where: {
+            name: loginData.name
         }
-        if (!bcrypt.compareSync(loginData.password, r.password)) {
+    }).then(r => {
+        const user = r[0].dataValues;
+        if (!bcrypt.compareSync(loginData.password, user.password)) {
             res.status(403).send('not correct password');
             return;
         }
-        let userID = {id: r.id};
+        let userID = {id: user.id};
         let token = getToken(userID);
         let result = {
             token: token,
-            id: r.id
+            id: user.id
         }
         res.send(result);
-
     });
+
 };
 
-exports.register = (req, res) => {
+exports.register = async (req, res) => {
     if (!req.body.name || !req.body.password) {
         res.status(412).send('No login or Password');
     }
@@ -39,16 +45,25 @@ exports.register = (req, res) => {
         name: req.body.name,
         password: bcrypt.hashSync(req.body.password, 10)
     }
-    dbConnection.register(user, res).then((r) => {
-        if (!r) {
+
+    await User.create(user)
+        .then(data => {
+            res.send({msg: 'user has been register'});
+        })
+        .catch(err => {
             res.status(403).send('error while writing in database');
-        }
-        res.send({msg: 'user has been register'});
-    });
+        })
+
+    // dbConnection.register(user, res).then((r) => {
+    //     if (!r) {
+    //         res.status(403).send('error while writing in database');
+    //     }
+    //     res.send({msg: 'user has been register'});
+    // });
 };
 
 exports.getUsers = (req, res) => {
-    dbConnection.getUsers().then(r => res.send(r));
+    User.findAll().then(r => res.send(r));
 };
 
 exports.welcome = (req, res) => {

@@ -2,7 +2,12 @@ let dbConnection = require('../db/dbConnection');
 const https = require('https');
 const fs = require('fs');
 
-
+const db = require("../models");
+const Images = db.images;
+const Tags = db.tags;
+const ImageToTag = db.imageToTag;
+const FavouriteImages = db.favouriteImages;
+const Op = db.sequelize.Op;
 
 exports.uploadImage = (req, res) => {
     if (!req.file) {
@@ -18,20 +23,16 @@ exports.uploadImage = (req, res) => {
             path: req.file.destination.substr(2) + '/' + req.file.filename,
             user_id: req.headers['x-userid']
         }
-        dbConnection.uploadImage(img_info)
-            .then((r) => {
-                const tags = req.body.tags.replace(/\s/g, '').split('#');
-                tags.shift();
-                const imgId = r.rows[0].id;
-                addTagsToImage(req.body.tags, imgId);
-                console.log('File is available!');
+        Images.create(img_info).then(r => {
+            const imgId = r.getDataValue('id');
+            addTagsToImage(req.body.tags, imgId);
+            console.log('File is available!');
 
-                return res.status(200).send({
-                    message: 'Success!',
-                    success: true
-                })
-            });
-
+            return res.status(200).send({
+                message: 'Success!',
+                success: true
+            })
+        });
     }
 };
 
@@ -44,25 +45,35 @@ const addTagsToImage = (tags, imageId) => {
     tags = new Set(tags);
     tags = [...tags];
 
+
+
     for (let tag of tags) {
-        dbConnection.getTagId(tag).then(async (r) => {
-            let tagId;
-            if (!r) {
-                await addNewTag(tag).then(r => tagId = r.rows[0].id);
+        let tagId;
+        Tags.findAll({
+            where: {
+                name: tag
+            }
+        }).then(async r => {
+            if (r.length === 0) {
+               await Tags.create({
+                    name: tag
+                }).then(r => {
+                    tagId = r.getDataValue('id');
+                })
             } else {
-                tagId = r.id;
+                tagId = r[0].id;
             }
             const params = {
-                tagId,
-                imageId
+               image_id: imageId,
+               tag_id: tagId
             }
-            await dbConnection.addTagToImage(params).then(r => {
-                if(!r) {
+
+            ImageToTag.create(params).then(r => {
+                if (!r.getDataValue('image_id')) {
                     throw new Error('Тег не добавлен');
                 }
             })
-        });
-
+        })
     }
 }
 
@@ -85,27 +96,30 @@ exports.uploadImageByUrl = (req, res) => {
                 path: imgPath,
                 user_id: req.headers['x-userid']
             }
-            dbConnection.uploadImage(img_info)
-                .then((r) => {
-                    const imgId = r.rows[0].id;
-                    addTagsToImage(req.body.tags, imgId);
-                    console.log('File is available!');
-                    return res.status(200).send({
-                        message: 'Success!',
-                        success: true
-                    })
-                });
+            Images.create(img_info).then(r => {
+                const imgId = r.getDataValue('id');
+                addTagsToImage(req.body.tags, imgId);
+                console.log('File is available!');
+                return res.status(200).send({
+                    message: 'Success!',
+                    success: true
+                })
+            })
         })
     })
 }
 
 const getAllImagesWithoutTags = async (userID) => {
     let imagesLinks;
-    await dbConnection.getAllImagesLinks().then( async (r) => {
+    await Images.findAll({
+        attributes: ['id', 'path', 'user_id'],
+        raw: true
+    }).then(async r => {
         imagesLinks = r;
         await checkIsFavourite(imagesLinks, userID);
     });
     return imagesLinks;
+
 }
 
 exports.getAllImages = async (req, res) => {
@@ -124,63 +138,131 @@ exports.getAllImages = async (req, res) => {
         res.send(imagesLinks);
     }
 
-    dbConnection.getTagsIds(tags).then(r => {
+    Tags.findAll({
+        attributes: ['id'],
+        where: {
+            name: tags
+        }
+    }).then(r => {
         if (r.length === 0) {
             res.send([]);
         }
-        if (r) {
-            dbConnection.getImagesByIds(r).then(async (response) => {
-                imagesLinks = response;
+        let ids = [];
+        for (let i of r) {
+            ids.push(i.id);
+        }
+        ImageToTag.findAll({
+            where: {
+                tag_id: ids
+            }
+        }).then(r => {
+            let image_ids = [];
+            for (let i of r) {
+                image_ids.push(i.image_id);
+            }
+            const count = image_ids.reduce((acc, n) => (acc[n] = (acc[n] || 0) + 1, acc), {});
+            Object.filter = (obj, predicate) =>
+                Object.keys(obj)
+                    .filter(key => predicate(obj[key]) )
+                    .reduce((res, key) => (res[key] = obj[key], res), {} );
+
+            const filtered = Object.filter(count, n => n === tags.length);
+            const images = Object.keys(filtered);
+            Images.findAll({
+                where: {
+                    id: images
+                },
+                raw: true
+            }).then(async r => {
+                imagesLinks = r;
                 await checkIsFavourite(imagesLinks, userID);
                 res.send(imagesLinks);
             })
-        }
+        })
+
     });
 };
 
 const checkIsFavourite = async (imagesLinks, userID) => {
     for (let i = 0; i < imagesLinks.length; i++) {
-
-        const props = {
-            user_id: userID,
-            image_id: imagesLinks[i].id
-        }
-        await dbConnection.checkIsFavourite(props).then(r => {
-            if (r) imagesLinks[i].favourite = true;
-            if (!r) imagesLinks[i].favourite = false;
+        await FavouriteImages.findAll({
+            where: {
+                user_id: userID,
+                image_id: imagesLinks[i].id
+            }
+        }).then(r => {
+            imagesLinks[i].favourite = r.length !== 0;
         });
     }
 }
 
 exports.getMyImages = (req, res) => {
     const userId = req.headers['x-userid'];
-    dbConnection.getAllImagesByUser(userId).then((r) => {
-        res.send(r);
-    });
-}
-
-exports.getUserFavouritesImages = (req, res) => {
-    const userId = req.headers['x-userid'];
-    dbConnection.getFavouriteImagesByUser(userId).then((r) => {
+    Images.findAll({
+        where: {
+            user_id: userId
+        },
+        raw: true
+    }).then(r => {
         res.send(r);
     })
 }
 
+exports.getUserFavouritesImages = (req, res) => {
+    const userId = req.headers['x-userid'];
+    Images.hasMany(FavouriteImages, {foreignKey: 'image_id'});
+    FavouriteImages.belongsTo(Images, {foreignKey: 'image_id'});
+    FavouriteImages.findAll({
+        where: {
+            user_id: userId
+        },
+        include: [Images],
+        raw: true,
+    })
+        .then(r => {
+            if (r.length === 0) {
+                res.send([]);
+            }
+            let imagesList = [];
+            for (let image of r) {
+                imagesList.push({
+                    id: image['Image.id'],
+                    path: image['Image.path'],
+                    user_id: image['Image.user_id']
+                })
+            }
+            res.send(imagesList);
+        });
+}
+
 exports.addToFavorites = (req, res) => {
-    data = {
+    const data = {
         image_id: req.body.imgId,
         user_id: req.headers['x-userid']
     }
 
-    dbConnection.addToFavorites(data).then(r => res.send(r));
+    FavouriteImages.create(data).then(r => res.send(r));
 }
 
 exports.removeFromFavorites = (req, res) => {
-    image_id = req.query.imgId;
-    data = {
+    const image_id = req.query.imgId;
+    const data = {
         image_id,
         user_id: req.headers['x-userid']
     }
 
-    dbConnection.removeFromFavorites(data).then(r => res.send(r));
+    FavouriteImages.destroy({
+        where: {
+            image_id: image_id,
+            user_id: data.user_id
+        }
+    }).then(num  => {
+        if (num === 1) {}
+            res.send({message: 'Was deleted sucessfully'});
+    })
+        .catch(err => {
+            res.sendStatus(500).send({
+                message: 'Could not delete'
+            });
+        });
 }

@@ -3,6 +3,7 @@ const pg = require('pg-promise')();
 const db = pg('postgres://localhost/img_service');
 
 exports.getUsers = _ => {
+
     return db.manyOrNone("SELECT name FROM users_table");
 };
 

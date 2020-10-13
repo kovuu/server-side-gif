@@ -8,7 +8,7 @@ let publicController = require('../controllers/public-controller');
 
 
 router.get('/', authController.welcome);
-router.get('/users', passport.authenticate('jwt', {session: false}), authController.getUsers);
+router.get('/users', authController.getUsers);
 router.get('/users/:id', publicController.getUser);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
