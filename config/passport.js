@@ -2,7 +2,8 @@ const passport = require('passport');
 const passportJWT = require('passport-jwt');
 const JwtStrategy = passportJWT.Strategy;
 const ExtractJwt = passportJWT.ExtractJwt;
-let dbConnection = require('../db/dbConnection')
+const db = require("../models");
+const User = db.users;
 
 
 const opts = {
@@ -11,9 +12,12 @@ const opts = {
 };
 
 const strategy = new JwtStrategy(opts, (payload, next) => {
-    dbConnection.getUserById(payload.id).then((res) => {
-        next(null, res);
-    })
+    User.findAll({
+        where: {
+            id: payload.id
+        },
+        raw: true
+    }).then(r => next(null, r));
 })
 
 passport.use(strategy);
