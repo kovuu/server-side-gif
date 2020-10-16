@@ -71,5 +71,5 @@ exports.welcome = (req, res) => {
 };
 
 getToken = (userID) => {
-    return jwt.sign(userID, process.env.SECRET_OR_KEY);
+    return jwt.sign(userID, process.env.JWT_KEY || 'jqwoiejqwoejwqoiwqjewoq');
 }
