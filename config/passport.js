@@ -7,7 +7,7 @@ const User = db.users;
 
 
 const opts = {
-    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme('Bearer'),
     secretOrKey: process.env.JWT_KEY || 'jqwoiejqwoejwqoiwqjewoq'
 };
 
