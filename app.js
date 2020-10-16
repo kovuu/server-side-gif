@@ -20,7 +20,6 @@ db.sequelize.sync();
 
 app.use(passport.initialize());
 
-const PORT = process.env.PORT;
-app.listen(PORT);
+app.listen(process.env.PORT || 80);
 
 module.exports = app;

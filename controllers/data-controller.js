@@ -1,6 +1,9 @@
 let dbConnection = require('../db/dbConnection');
 const https = require('https');
 const fs = require('fs');
+const AWS = require('aws-sdk');
+const request = require('request');
+
 
 const db = require("../models");
 const Images = db.images;
@@ -8,6 +11,8 @@ const Tags = db.tags;
 const ImageToTag = db.imageToTag;
 const FavouriteImages = db.favouriteImages;
 const Op = db.sequelize.Op;
+
+const s3 = new AWS.S3({apiVersion: "latest"});
 
 exports.uploadImage = (req, res) => {
     if (!req.file) {
@@ -18,9 +23,10 @@ exports.uploadImage = (req, res) => {
         });
 
     } else {
+        console.log(req);
         const img_info = {
             name: req.file.originalname,
-            path: req.file.destination.substr(2) + '/' + req.file.filename,
+            path: req.file.location,
             user_id: req.headers['x-userid']
         }
         Images.create(img_info).then(r => {
@@ -83,17 +89,44 @@ const addNewTag = (tag) => {
     });
 }
 
+const uploadFromUrlToS3 = (url) => {
+    return new Promise((resolve,reject)=> {
+        request({
+            url: url,
+            encoding: null
+        }, function(err, res, body) {
+            if (err){
+                reject(err);
+            }
+            const key = Date.now().toString();
+            var objectParams = {
+                ContentType: 'image/png',
+                ContentLength: res.headers['content-length'],
+                Key:  key,
+                Body: body,
+                Bucket: 'gif-service',
+                ACL: 'public-read'
+            };
+            s3.putObject(objectParams).promise().then(r => {
+                const res = s3.getSignedUrl('getObject',{Bucket: 'gif-service', Key: key});
+                resolve(res.split('?')[0]);
+            });
+
+        });
+    });
+}
+
 exports.uploadImageByUrl = (req, res) => {
     const imageUrl = req.body.image_url;
-    const imgName = 'image'+Date.now()+'.gif';
-    const imgPath = `data/img/${imgName}`;
-    let file = fs.createWriteStream('./'+imgPath);
-    https.get(imageUrl, function (response) {
-        response.pipe(file);
-        file.on("finish",() => {
+
+
+    uploadFromUrlToS3(imageUrl)
+        .then(r => {
+            const imageLink = r;
+
             const img_info = {
-                name: imgName,
-                path: imgPath,
+                name: 'image',
+                path: imageLink,
                 user_id: req.headers['x-userid']
             }
             Images.create(img_info).then(r => {
@@ -105,7 +138,8 @@ exports.uploadImageByUrl = (req, res) => {
                     success: true
                 })
             })
-        })
+        }).catch(function (err) {
+            console.log('image not saved', err);
     })
 }
 
