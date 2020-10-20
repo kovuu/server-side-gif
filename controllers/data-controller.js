@@ -6,10 +6,10 @@ const request = require('request');
 
 
 const db = require("../models");
-const Images = db.images;
-const Tags = db.tags;
-const ImageToTag = db.imageToTag;
-const FavouriteImages = db.favouriteImages;
+const Images = db.Image;
+const Tags = db.Tag;
+const ImageToTag = db.ImageToTag;
+const FavouriteImages = db.FavouriteImage;
 const Op = db.sequelize.Op;
 
 const s3 = new AWS.S3({apiVersion: "latest"});

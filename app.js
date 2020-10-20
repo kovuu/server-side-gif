@@ -14,8 +14,6 @@ app.use(parser.json());
 app.use('/', routes);
 app.use('/data/img', express.static(__dirname + '/data/img'));
 
-const db = require("./models");
-db.sequelize.sync();
 
 
 app.use(passport.initialize());

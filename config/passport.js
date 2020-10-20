@@ -3,7 +3,7 @@ const passportJWT = require('passport-jwt');
 const JwtStrategy = passportJWT.Strategy;
 const ExtractJwt = passportJWT.ExtractJwt;
 const db = require("../models");
-const User = db.users;
+const User = db.User;
 
 
 const opts = {

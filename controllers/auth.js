@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 const db = require("../models");
-const User = db.users;
+const User = db.User;
 const Op = db.sequelize.Op;
 
 
@@ -64,6 +64,7 @@ exports.register = async (req, res) => {
 
 exports.getUsers = (req, res) => {
     User.findAll().then(r => res.send(r));
+
 };
 
 exports.welcome = (req, res) => {
