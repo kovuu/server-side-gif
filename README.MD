@@ -10,7 +10,7 @@ enter the database data in config/config.js. Also you need to enter your AWS s3 
 ### Prerequisites
 
 Make sure you have NodeJS and npm installed before starting the program.
-Also you need have aws api keys for S3.
+Also you need to have aws api keys for S3.
 
 
 ### Installing
@@ -52,13 +52,13 @@ Deploy instruction:
    Also enter the fields from the .env project into the config vars, except for the port 
    (JWT_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
 
-4. Now that we have configured our project, we can push our docker image to the heroku server and release it
+4. Since we have configured our project, we can push our docker image to the heroku server and release it
 
         heroku container:push web -a <name-of-your-heroku-project>
         heroku container:release web -a <name-of-your-heroku-project>
         heroku open        
 
-5. The final touch enter the Heroku console and run migrations
+5. The final touch to enter the Heroku console and run migrations
         
         heroku run bash -a <name-of-your-heroku-project>
         npx sequelize-cli db:migrate
