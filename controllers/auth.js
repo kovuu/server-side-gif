@@ -6,8 +6,9 @@ const db = require("../models");
 const User = db.User;
 const Op = db.sequelize.Op;
 
+const controller = {}
 
-exports.login = async (req, res) => {
+controller.login = async (req, res) => {
     if (!req.body.name || !req.body.password) {
         res.status(412).send('No login or Password');
     }
@@ -37,7 +38,7 @@ exports.login = async (req, res) => {
 
 };
 
-exports.register = async (req, res) => {
+controller.register = async (req, res) => {
     if (!req.body.name || !req.body.password) {
         res.status(412).send('No login or Password');
     }
@@ -53,24 +54,19 @@ exports.register = async (req, res) => {
         .catch(err => {
             res.status(403).send('error while writing in database');
         })
-
-    // dbConnection.register(user, res).then((r) => {
-    //     if (!r) {
-    //         res.status(403).send('error while writing in database');
-    //     }
-    //     res.send({msg: 'user has been register'});
-    // });
 };
 
-exports.getUsers = (req, res) => {
+controller.getUsers = (req, res) => {
     User.findAll().then(r => res.send(r));
 
 };
 
-exports.welcome = (req, res) => {
+controller.welcome = (req, res) => {
     res.send('Hello World');
 };
 
 getToken = (userID) => {
     return jwt.sign(userID, process.env.JWT_KEY || 'jqwoiejqwoejwqoiwqjewoq');
 }
+
+module.exports = controller;

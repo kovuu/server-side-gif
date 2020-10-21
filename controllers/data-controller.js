@@ -1,6 +1,4 @@
 let dbConnection = require('../db/dbConnection');
-const https = require('https');
-const fs = require('fs');
 const AWS = require('aws-sdk');
 const request = require('request');
 
@@ -10,7 +8,6 @@ const Images = db.Image;
 const Tags = db.Tag;
 const ImageToTag = db.ImageToTag;
 const FavouriteImages = db.FavouriteImage;
-const Op = db.sequelize.Op;
 
 const s3 = new AWS.S3({apiVersion: "latest"});
 
