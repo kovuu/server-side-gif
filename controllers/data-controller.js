@@ -14,7 +14,9 @@ const Op = db.sequelize.Op;
 
 const s3 = new AWS.S3({apiVersion: "latest"});
 
-exports.uploadImage = (req, res) => {
+const controller = {}
+
+const uploadImage = (req, res) => {
     if (!req.file) {
         console.log("No file is available!");
         return res.status(400).send({
@@ -31,7 +33,7 @@ exports.uploadImage = (req, res) => {
         }
         Images.create(img_info).then(r => {
             const imgId = r.getDataValue('id');
-            addTagsToImage(req.body.tags, imgId);
+            controller.addTagsToImage(req.body.tags, imgId);
             console.log('File is available!');
 
             return res.status(200).send({
@@ -41,6 +43,7 @@ exports.uploadImage = (req, res) => {
         });
     }
 };
+controller.uploadImage = uploadImage;
 
 const addTagsToImage = (tags, imageId) => {
     tags = tags.replace(/\s/g, '').split('#');
@@ -83,6 +86,8 @@ const addTagsToImage = (tags, imageId) => {
     }
 }
 
+controller.addTagsToImage = addTagsToImage;
+
 const addNewTag = (tag) => {
     return dbConnection.addNewTag(tag).then( r => {
         return r;
@@ -116,11 +121,13 @@ const uploadFromUrlToS3 = (url) => {
     });
 }
 
-exports.uploadImageByUrl = (req, res) => {
+controller.uploadFromUrlToS3 = uploadFromUrlToS3;
+
+const uploadImageByUrl = (req, res) => {
     const imageUrl = req.body.image_url;
 
 
-    uploadFromUrlToS3(imageUrl)
+    controller.uploadFromUrlToS3(imageUrl)
         .then(r => {
             const imageLink = r;
 
@@ -131,7 +138,7 @@ exports.uploadImageByUrl = (req, res) => {
             }
             Images.create(img_info).then(r => {
                 const imgId = r.getDataValue('id');
-                addTagsToImage(req.body.tags, imgId);
+                controller.addTagsToImage(req.body.tags, imgId);
                 console.log('File is available!');
                 return res.status(200).send({
                     message: 'Success!',
@@ -143,33 +150,42 @@ exports.uploadImageByUrl = (req, res) => {
     })
 }
 
-const getAllImagesWithoutTags = async (userID) => {
-    let imagesLinks;
+controller.uploadImageByUrl = uploadImageByUrl
+
+const getAllImagesWithoutTags = async (userID = null) => {
+    let imagesLinks = [];
     await Images.findAll({
         attributes: ['id', 'path', 'user_id'],
         raw: true
     }).then(async r => {
         imagesLinks = r;
-        await checkIsFavourite(imagesLinks, userID);
+        if (userID) {
+            await controller.checkIsFavourite(imagesLinks, userID);
+        }
     });
     return imagesLinks;
 
 }
 
-exports.getAllImages = async (req, res) => {
+controller.getAllImagesWithoutTags = getAllImagesWithoutTags;
+
+const getAllImages = async (req, res) => {
     const userID = req.headers['x-userid'] ? req.headers['x-userid'] : null;
     let imagesLinks;
-    let tags = req.query.tags.trim().replace(/\s/g, '').split('#');
-    tags.shift();
-    for (let i = 0; i < tags.length; i++) {
-        tags[i] = tags[i].toLowerCase();
+    let tags = [];
+    if (req.query.tags) {
+        tags = req.query.tags.trim().replace(/\s/g, '').split('#');
+        tags.shift();
+        for (let i = 0; i < tags.length; i++) {
+            tags[i] = tags[i].toLowerCase();
+        }
+        tags = new Set(tags);
+        tags = [...tags];
     }
-    tags = new Set(tags);
-    tags = [...tags];
-
     if (tags.length === 0) {
-        imagesLinks = await getAllImagesWithoutTags(userID);
+        imagesLinks = await controller.getAllImagesWithoutTags(userID);
         res.send(imagesLinks);
+        return imagesLinks;
     }
 
     Tags.findAll({
@@ -202,6 +218,7 @@ exports.getAllImages = async (req, res) => {
 
             const filtered = Object.filter(count, n => n === tags.length);
             const images = Object.keys(filtered);
+
             Images.findAll({
                 where: {
                     id: images
@@ -209,13 +226,15 @@ exports.getAllImages = async (req, res) => {
                 raw: true
             }).then(async r => {
                 imagesLinks = r;
-                await checkIsFavourite(imagesLinks, userID);
+                await controller.checkIsFavourite(imagesLinks, userID);
                 res.send(imagesLinks);
             })
         })
 
     });
 };
+
+controller.getAllImages = getAllImages;
 
 const checkIsFavourite = async (imagesLinks, userID) => {
     for (let i = 0; i < imagesLinks.length; i++) {
@@ -230,7 +249,9 @@ const checkIsFavourite = async (imagesLinks, userID) => {
     }
 }
 
-exports.getMyImages = (req, res) => {
+controller.checkIsFavourite = checkIsFavourite;
+
+const getMyImages = (req, res) => {
     const userId = req.headers['x-userid'];
     Images.findAll({
         where: {
@@ -242,7 +263,11 @@ exports.getMyImages = (req, res) => {
     })
 }
 
-exports.getUserFavouritesImages = (req, res) => {
+controller.getMyImages = getMyImages;
+
+
+
+const getUserFavouritesImages = (req, res) => {
     const userId = req.headers['x-userid'];
     Images.hasMany(FavouriteImages, {foreignKey: 'image_id'});
     FavouriteImages.belongsTo(Images, {foreignKey: 'image_id'});
@@ -269,7 +294,9 @@ exports.getUserFavouritesImages = (req, res) => {
         });
 }
 
-exports.addToFavorites = (req, res) => {
+controller.getUserFavouritesImages = getUserFavouritesImages;
+
+const addToFavorites = (req, res) => {
     const data = {
         image_id: req.body.imgId,
         user_id: req.headers['x-userid']
@@ -278,7 +305,9 @@ exports.addToFavorites = (req, res) => {
     FavouriteImages.create(data).then(r => res.send(r));
 }
 
-exports.removeFromFavorites = (req, res) => {
+controller.addToFavorites = addToFavorites;
+
+const removeFromFavorites = (req, res) => {
     const image_id = req.query.imgId;
     const data = {
         image_id,
@@ -300,3 +329,7 @@ exports.removeFromFavorites = (req, res) => {
             });
         });
 }
+
+controller.removeFromFavorites = removeFromFavorites;
+
+module.exports = controller;

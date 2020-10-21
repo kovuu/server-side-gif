@@ -6,7 +6,6 @@ let authController = require('../controllers/auth');
 let dataController = require('../controllers/data-controller')
 let publicController = require('../controllers/public-controller');
 
-
 router.get('/', authController.welcome);
 router.get('/users', authController.getUsers);
 router.get('/users/:id', publicController.getUser);
