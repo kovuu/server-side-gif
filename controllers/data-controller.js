@@ -13,7 +13,7 @@ const s3 = new AWS.S3({apiVersion: "latest"});
 
 const controller = {}
 
-const uploadImage = (req, res) => {
+const uploadImage = async (req, res) => {
     if (!req.file) {
         console.log("No file is available!");
         return res.status(400).send({
@@ -28,19 +28,27 @@ const uploadImage = (req, res) => {
             path: req.file.location,
             user_id: req.headers['x-userid']
         }
-        Images.create(img_info).then(r => {
-            const imgId = r.getDataValue('id');
-            controller.addTagsToImage(req.body.tags, imgId);
-            console.log('File is available!');
-
-            return res.status(200).send({
-                message: 'Success!',
-                success: true
-            })
-        });
+        await controller.saveImage(img_info, req, res);
     }
 };
 controller.uploadImage = uploadImage;
+
+const saveImage = (img_info, req, res) => {
+    Images.create(img_info).then(async r => {
+        const imgId = r.getDataValue('id');
+        if (req.body.tags) {
+            await controller.addTagsToImage(req.body.tags, imgId);
+        }
+        console.log('File is available!');
+
+        res.status(200).send({
+            message: 'Success!',
+            success: true
+        })
+    });
+}
+
+controller.saveImage = saveImage;
 
 const addTagsToImage = (tags, imageId) => {
     tags = tags.replace(/\s/g, '').split('#');
@@ -125,7 +133,7 @@ const uploadImageByUrl = (req, res) => {
 
 
     controller.uploadFromUrlToS3(imageUrl)
-        .then(r => {
+        .then(async r => {
             const imageLink = r;
 
             const img_info = {
@@ -133,15 +141,7 @@ const uploadImageByUrl = (req, res) => {
                 path: imageLink,
                 user_id: req.headers['x-userid']
             }
-            Images.create(img_info).then(r => {
-                const imgId = r.getDataValue('id');
-                controller.addTagsToImage(req.body.tags, imgId);
-                console.log('File is available!');
-                return res.status(200).send({
-                    message: 'Success!',
-                    success: true
-                })
-            })
+            await controller.saveImage(img_info, req, res);
         }).catch(function (err) {
             console.log('image not saved', err);
     })
